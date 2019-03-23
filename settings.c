@@ -634,6 +634,7 @@ void save_open_settings(settings_w *sesskey, Conf *conf)
     write_setting_b(sesskey, "ApplicationCursorKeys", conf_get_bool(conf, CONF_app_cursor));
     write_setting_b(sesskey, "ApplicationKeypad", conf_get_bool(conf, CONF_app_keypad));
     write_setting_b(sesskey, "NetHackKeypad", conf_get_bool(conf, CONF_nethack_keypad));
+    write_setting_i(sesskey, "Transparency", conf_get_int(conf, CONF_transparency));  /* HACK: PuttyTray / Transparency */
     write_setting_b(sesskey, "AltF4", conf_get_bool(conf, CONF_alt_f4));
     write_setting_b(sesskey, "AltSpace", conf_get_bool(conf, CONF_alt_space));
     write_setting_b(sesskey, "AltOnly", conf_get_bool(conf, CONF_alt_only));
@@ -1045,6 +1046,7 @@ void load_open_settings(settings_r *sesskey, Conf *conf)
     gppb(sesskey, "ApplicationCursorKeys", false, conf, CONF_app_cursor);
     gppb(sesskey, "ApplicationKeypad", false, conf, CONF_app_keypad);
     gppb(sesskey, "NetHackKeypad", false, conf, CONF_nethack_keypad);
+    gppi(sesskey, "Transparency", 255, conf, CONF_transparency);  /* HACK: PuttyTray / Transparency */
     gppb(sesskey, "AltF4", true, conf, CONF_alt_f4);
     gppb(sesskey, "AltSpace", false, conf, CONF_alt_space);
     gppb(sesskey, "AltOnly", false, conf, CONF_alt_only);

@@ -364,6 +364,25 @@ static const SeatVtable win_seat_vt = {
 static Seat win_seat_impl = { &win_seat_vt };
 Seat *const win_seat = &win_seat_impl;
 
+/*
+ * HACK: PuttyTray / Transparency
+ * Function to set the window transparency
+ */
+BOOL MakeWindowTransparent(HWND hWnd, int factor);
+typedef DWORD (WINAPI *PSLWA)(HWND, DWORD, BYTE, DWORD);
+static PSLWA pSetLayeredWindowAttributes = NULL;
+static BOOL initialized = FALSE;
+#if !defined(WS_EX_LAYERED)
+	#define WS_EX_LAYERED	0x00080000
+#endif
+#if !defined(LWA_COLORKEY)
+	#define LWA_COLORKEY	0x00000001
+#endif
+#if !defined(LWA_ALPHA)
+	#define LWA_ALPHA	0x00000002
+#endif
+//---------------------------------
+
 static void start_backend(void)
 {
     const struct BackendVtable *vt;
@@ -894,6 +913,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
     term_set_focus(term, GetForegroundWindow() == hwnd);
     UpdateWindow(hwnd);
+
+    /*
+     * HACK: PuttyTray / Transparency
+     * Function to set the window transparency
+     */
+    if (conf_get_int(conf, CONF_transparency) >= 50 && conf_get_int(conf, CONF_transparency) < 255) {
+        MakeWindowTransparent(hwnd, conf_get_int(conf, CONF_transparency));
+    }
 
     while (1) {
 	HANDLE *handles;
@@ -2389,6 +2416,20 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message,
 		/* Pass new config data to the back end */
                 if (backend)
                     backend_reconfig(backend, conf);
+
+		/*
+		 * HACK: PuttyTray / Transparency
+		 * Function to set the window transparency
+		 */
+		if (conf_get_int(conf, CONF_transparency) >= 50) {
+		    if (conf_get_int(conf, CONF_transparency) > 255) {
+		        MakeWindowTransparent(hwnd, 255);
+		    } else {
+		        MakeWindowTransparent(hwnd, conf_get_int(conf, CONF_transparency));
+		    }
+		} else {
+		    MakeWindowTransparent(hwnd, 255);
+		}
 
 		/* Screen size changed ? */
 		if (conf_get_int(conf, CONF_height) !=
@@ -5831,4 +5872,44 @@ static bool win_seat_set_trust_status(Seat *seat, bool trusted)
 {
     term_set_trust_status(term, trusted);
     return true;
+}
+
+
+/*
+ * HACK: PuttyTray / Transparency
+ * Function to set the window transparency
+ */
+BOOL MakeWindowTransparent(HWND hWnd, int factor)
+{
+    // First, see if we can get the API call we need. If we've tried once, we don't need to try again.
+    if (!initialized) {
+        HMODULE hDLL = LoadLibrary("user32");
+        pSetLayeredWindowAttributes = (PSLWA) GetProcAddress(hDLL, "SetLayeredWindowAttributes");
+        initialized = TRUE;
+    }
+    if (pSetLayeredWindowAttributes == NULL) {
+        return FALSE;
+    }
+
+    // Sanity checks
+    if (factor < 0) { return FALSE; }
+    if (factor > 255) { factor = 255; }
+
+    // Make the window transparent
+    if (factor < 255) {
+        // Windows need to be layered to be made transparent. This is done by modifying the extended style bits to contain WS_EX_LAYARED.
+        SetLastError(0);
+        SetWindowLong(hWnd, GWL_EXSTYLE, GetWindowLong(hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+        if (GetLastError()) {
+            return FALSE;
+        }
+
+        // Now, we need to set the 'layered window attributes'. This is where the alpha values get set.
+        return pSetLayeredWindowAttributes (hWnd, RGB(255,255,255), factor, LWA_ALPHA);
+
+    // Make the window opaque
+    } else {
+        SetWindowLong(hWnd, GWL_EXSTYLE, GetWindowLong(hWnd, GWL_EXSTYLE) & ~WS_EX_LAYERED);
+        return TRUE;
+    }
 }

@@ -722,6 +722,18 @@ int cmdline_process_param(const char *p, char *value,
 	SAVEABLE(1);
 	conf_set_int(conf, CONF_addressfamily, ADDRTYPE_IPV6);
     }
+
+    /*
+     * HACK: PuttyTray / Transparency
+     * Function to set the window transparency
+     */
+    if (!strcmp(p, "-notrans")) {
+	RETURN(1);
+	SAVEABLE(1);
+	UNAVAILABLE_IN(TOOLTYPE_FILETRANSFER | TOOLTYPE_NONNETWORK);
+	conf_set_int(conf, CONF_transparency, 255);
+    }
+
     if (!strcmp(p, "-sercfg")) {
 	char* nextitem;
 	RETURN(2);

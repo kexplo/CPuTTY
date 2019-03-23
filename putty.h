@@ -1484,6 +1484,7 @@ NORETURN void cleanup_exit(int);
     X(INT, NONE, shadowboldoffset) /* in pixels */ \
     X(BOOL, NONE, crhaslf) \
     X(STR, NONE, winclass) \
+    X(INT, NONE, transparency) /* HACK: PuttyTray / Transparency */ \
     /* end of list */
 
 /* Now define the actual enum of option keywords using that macro. */
